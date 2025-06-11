@@ -155,36 +155,53 @@ export default function NewMaintenancePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">車輛</p>
-                  <p className="font-semibold">
-                    {vehicle.brand} {vehicle.model}
-                  </p>
+              <div className="flex gap-6">
+                {/* 車輛圖片 */}
+                <div className="w-32 h-32 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border">
+                  {vehicle.image ? (
+                    <img
+                      src={vehicle.image || "/placeholder.svg"}
+                      alt={`${vehicle.brand} ${vehicle.model}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <Car className="h-16 w-16" />
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">車牌</p>
-                  <p className="font-semibold">{vehicle.licensePlate}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">車主</p>
-                  <p className="font-semibold">{vehicle.ownerName}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">目前公里數</p>
-                  <p className="font-semibold">{vehicle.currentMileage.toLocaleString()} km</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">客戶電話</p>
-                  <p className="font-semibold">{vehicle.customerPhone}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">出廠年份</p>
-                  <p className="font-semibold">{vehicle.manufactureYear}年</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">引擎代碼</p>
-                  <p className="font-semibold">{vehicle.engineCode}</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
+                  <div>
+                    <p className="text-sm text-gray-600">車輛</p>
+                    <p className="font-semibold">
+                      {vehicle.brand} {vehicle.model}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">車牌</p>
+                    <p className="font-semibold">{vehicle.licensePlate}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">車主</p>
+                    <p className="font-semibold">{vehicle.ownerName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">目前公里數</p>
+                    <p className="font-semibold">{vehicle.currentMileage.toLocaleString()} km</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">客戶電話</p>
+                    <p className="font-semibold">{vehicle.customerPhone}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">出廠年份</p>
+                    <p className="font-semibold">{vehicle.manufactureYear}年</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">引擎代碼</p>
+                    <p className="font-semibold">{vehicle.engineCode}</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -331,12 +348,23 @@ export default function NewMaintenancePage() {
             <div className="py-4">
               <p className="mb-4">您即將為以下車輛新增保養記錄：</p>
               <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <p>
-                  <strong>車輛:</strong> {vehicle.brand} {vehicle.model} ({vehicle.licensePlate})
-                </p>
-                <p>
-                  <strong>車主:</strong> {vehicle.ownerName}
-                </p>
+                <div className="flex items-center gap-4 mb-3">
+                  {vehicle.image && (
+                    <img
+                      src={vehicle.image || "/placeholder.svg"}
+                      alt={`${vehicle.brand} ${vehicle.model}`}
+                      className="w-16 h-16 object-cover rounded-md"
+                    />
+                  )}
+                  <div>
+                    <p>
+                      <strong>車輛:</strong> {vehicle.brand} {vehicle.model} ({vehicle.licensePlate})
+                    </p>
+                    <p>
+                      <strong>車主:</strong> {vehicle.ownerName}
+                    </p>
+                  </div>
+                </div>
                 <p>
                   <strong>保養日期:</strong> {new Date(formData.date).toLocaleString("zh-TW")}
                 </p>

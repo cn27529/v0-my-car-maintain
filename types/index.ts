@@ -8,6 +8,7 @@ export interface Vehicle {
   ownerName: string // 車主姓名
   customerPhone: string // 客戶電話
   manufactureYear: number // 出廠年份
+  image?: string // 車輛圖片
   createdAt: Date
   updatedAt: Date
 }

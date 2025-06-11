@@ -6,7 +6,7 @@ import { MainLayout } from "@/components/main-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, Wrench, DollarSign, Gauge } from "lucide-react"
+import { ArrowLeft, Calendar, Wrench, DollarSign, Gauge, Car } from "lucide-react"
 import { mockVehicles, mockMaintenanceRecords, defaultMaintenanceItems } from "@/lib/data"
 import type { Vehicle, MaintenanceRecord, MaintenanceItem } from "@/types"
 
@@ -85,24 +85,41 @@ export default function MaintenanceHistoryPage() {
             <h1 className="text-2xl font-bold mb-4">保養記錄</h1>
 
             {/* 車輛基本資訊 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div>
-                <p className="text-sm text-gray-600">車輛</p>
-                <p className="font-semibold">
-                  {vehicle.brand} {vehicle.model}
-                </p>
+            <div className="flex gap-6 mb-6">
+              {/* 車輛圖片 */}
+              <div className="w-32 h-32 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border">
+                {vehicle.image ? (
+                  <img
+                    src={vehicle.image || "/placeholder.svg"}
+                    alt={`${vehicle.brand} ${vehicle.model}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <Car className="h-16 w-16" />
+                  </div>
+                )}
               </div>
-              <div>
-                <p className="text-sm text-gray-600">車牌</p>
-                <p className="font-semibold">{vehicle.licensePlate}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">車主</p>
-                <p className="font-semibold">{vehicle.ownerName}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">目前公里數</p>
-                <p className="font-semibold">{vehicle.currentMileage.toLocaleString()} km</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
+                <div>
+                  <p className="text-sm text-gray-600">車輛</p>
+                  <p className="font-semibold">
+                    {vehicle.brand} {vehicle.model}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">車牌</p>
+                  <p className="font-semibold">{vehicle.licensePlate}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">車主</p>
+                  <p className="font-semibold">{vehicle.ownerName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">目前公里數</p>
+                  <p className="font-semibold">{vehicle.currentMileage.toLocaleString()} km</p>
+                </div>
               </div>
             </div>
           </div>

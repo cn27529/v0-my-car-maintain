@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { FileUpload } from "@/components/ui/file-upload"
 import { Plus, Edit, Car, Phone, Users, Grid, List, Search, Calendar } from "lucide-react"
 import { mockVehicles, mockMaintenanceRecords, defaultMaintenanceItems } from "@/lib/data"
 import type { Vehicle } from "@/types"
@@ -42,6 +43,7 @@ export default function VehiclesPage() {
     ownerName: "",
     customerPhone: "",
     manufactureYear: "",
+    image: "",
   })
 
   // 搜尋過濾
@@ -128,17 +130,7 @@ export default function VehiclesPage() {
     }
 
     setIsDialogOpen(false)
-    setEditingVehicle(null)
-    setFormData({
-      brand: "",
-      model: "",
-      engineCode: "",
-      currentMileage: "",
-      licensePlate: "",
-      ownerName: "",
-      customerPhone: "",
-      manufactureYear: "",
-    })
+    resetForm()
   }
 
   const handleEdit = (vehicle: Vehicle) => {
@@ -152,8 +144,37 @@ export default function VehiclesPage() {
       ownerName: vehicle.ownerName,
       customerPhone: vehicle.customerPhone,
       manufactureYear: vehicle.manufactureYear.toString(),
+      image: vehicle.image || "",
     })
     setIsDialogOpen(true)
+  }
+
+  const resetForm = () => {
+    setEditingVehicle(null)
+    setFormData({
+      brand: "",
+      model: "",
+      engineCode: "",
+      currentMileage: "",
+      licensePlate: "",
+      ownerName: "",
+      customerPhone: "",
+      manufactureYear: "",
+      image: "",
+    })
+  }
+
+  const handleImageUpload = (file: File | null) => {
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        setFormData({ ...formData, image: result })
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setFormData({ ...formData, image: "" })
+    }
   }
 
   const getLatestMaintenance = (vehicleId: string) => {
@@ -174,35 +195,51 @@ export default function VehiclesPage() {
       <Card className="hover:shadow-md transition-shadow">
         <CardContent className="p-6">
           <div className="flex justify-between items-start">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Car className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-semibold">
-                  {vehicle.brand} {vehicle.model}
-                </h3>
-                <Badge variant="outline">{vehicle.licensePlate}</Badge>
+            <div className="flex gap-4">
+              {/* 車輛圖片 */}
+              <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border">
+                {vehicle.image ? (
+                  <img
+                    src={vehicle.image || "/placeholder.svg"}
+                    alt={`${vehicle.brand} ${vehicle.model}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <Car className="h-12 w-12" />
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  <span>{vehicle.customerPhone}</span>
+                  <h3 className="text-lg font-semibold">
+                    {vehicle.brand} {vehicle.model}
+                  </h3>
+                  <Badge variant="outline">{vehicle.licensePlate}</Badge>
                 </div>
-                <div>車主: {vehicle.ownerName}</div>
-                <div>出廠年份: {vehicle.manufactureYear}</div>
-                <div>引擎代碼: {vehicle.engineCode}</div>
-                <div>公里數: {vehicle.currentMileage.toLocaleString()} km</div>
-              </div>
 
-              {latestMaintenance && maintenanceItem && (
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800">最近保養: {maintenanceItem.name}</p>
-                  <p className="text-xs text-blue-600">
-                    {new Date(latestMaintenance.date).toLocaleDateString("zh-TW")} -
-                    {latestMaintenance.mileage.toLocaleString()} km
-                  </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    <span>{vehicle.customerPhone}</span>
+                  </div>
+                  <div>車主: {vehicle.ownerName}</div>
+                  <div>出廠年份: {vehicle.manufactureYear}</div>
+                  <div>引擎代碼: {vehicle.engineCode}</div>
+                  <div>公里數: {vehicle.currentMileage.toLocaleString()} km</div>
                 </div>
-              )}
+
+                {latestMaintenance && maintenanceItem && (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm font-medium text-blue-800">最近保養: {maintenanceItem.name}</p>
+                    <p className="text-xs text-blue-600">
+                      {new Date(latestMaintenance.date).toLocaleDateString("zh-TW")} -
+                      {latestMaintenance.mileage.toLocaleString()} km
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -249,6 +286,27 @@ export default function VehiclesPage() {
                 <DialogTitle>{editingVehicle ? "編輯車輛" : "新增車輛"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* 車輛圖片上傳 */}
+                <div>
+                  <Label>車輛圖片</Label>
+                  <FileUpload
+                    accept="image/*"
+                    maxSize={2}
+                    onFileSelect={handleImageUpload}
+                    currentFile={formData.image}
+                    placeholder="上傳車輛圖片 (最大 2MB)"
+                  />
+                  {formData.image && (
+                    <div className="mt-2">
+                      <img
+                        src={formData.image || "/placeholder.svg"}
+                        alt="車輛預覽"
+                        className="max-h-32 object-contain border rounded"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="brand">廠牌</Label>
