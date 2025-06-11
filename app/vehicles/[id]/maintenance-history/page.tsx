@@ -1,18 +1,14 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { MainLayout } from "@/components/main-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, Wrench, DollarSign, Gauge, Car } from "lucide-react"
-import { mockVehicles, mockMaintenanceRecords, defaultMaintenanceItems } from "@/lib/data"
-import type { Vehicle, MaintenanceRecord, MaintenanceItem } from "@/types"
-
-interface MaintenanceRecordWithItem extends MaintenanceRecord {
-  item: MaintenanceItem
-}
+import { ArrowLeft, Car, Calendar, User, Phone, Plus, Wrench, DollarSign } from "lucide-react"
+import { ImageIcon } from "lucide-react"
+import { mockVehicles, defaultMaintenanceItems, mockMaintenanceRecords } from "@/lib/data"
+import type { Vehicle, MaintenanceItem, MaintenanceRecord } from "@/types"
 
 export default function MaintenanceHistoryPage() {
   const params = useParams()
@@ -20,17 +16,16 @@ export default function MaintenanceHistoryPage() {
   const vehicleId = params.id as string
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
-  const [maintenanceHistory, setMaintenanceHistory] = useState<MaintenanceRecordWithItem[]>([])
+  const [records, setRecords] = useState<(MaintenanceRecord & { item: MaintenanceItem })[]>([])
 
   useEffect(() => {
-    // 查找車輛資料
     const foundVehicle = mockVehicles.find((v) => v.id === vehicleId)
     if (foundVehicle) {
       setVehicle(foundVehicle)
     }
 
-    // 查找保養記錄
-    const records = mockMaintenanceRecords
+    // 獲取該車輛的保養記錄
+    const vehicleRecords = mockMaintenanceRecords
       .filter((record) => record.vehicleId === vehicleId)
       .map((record) => {
         const item = defaultMaintenanceItems.find((item) => item.id === record.itemId)
@@ -41,7 +36,7 @@ export default function MaintenanceHistoryPage() {
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-    setMaintenanceHistory(records)
+    setRecords(vehicleRecords)
   }, [vehicleId])
 
   if (!vehicle) {
@@ -49,123 +44,152 @@ export default function MaintenanceHistoryPage() {
       <MainLayout>
         <div className="p-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">車輛不存在</h1>
-            <Button onClick={() => router.back()} className="mt-4">
-              返回
-            </Button>
+            <h1 className="text-2xl font-bold mb-4">車輛不存在</h1>
+            <Button onClick={() => router.push("/vehicles")}>返回車輛列表</Button>
           </div>
         </div>
       </MainLayout>
     )
   }
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      引擎: "bg-red-100 text-red-800",
-      傳動: "bg-blue-100 text-blue-800",
-      冷卻: "bg-cyan-100 text-cyan-800",
-      電氣: "bg-yellow-100 text-yellow-800",
-      懸吊: "bg-purple-100 text-purple-800",
-      煞車: "bg-orange-100 text-orange-800",
-      濾清: "bg-green-100 text-green-800",
-    }
-    return colors[category] || "bg-gray-100 text-gray-800"
-  }
+  const totalCost = records.reduce((sum, record) => sum + (record.cost || 0), 0)
+  const lastMaintenance = records[0]
 
   return (
     <MainLayout>
       <div className="p-6">
-        <div className="mb-6">
-          <Button variant="outline" onClick={() => router.back()} className="mb-4">
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="outline" onClick={() => router.push("/vehicles")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            返回車輛管理
+            返回車輛列表
           </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold">保養記錄</h1>
+            <p className="text-gray-600">查看車輛的所有保養維護記錄</p>
+          </div>
+          <Button onClick={() => router.push(`/vehicles/${vehicleId}/new-maintenance`)}>
+            <Plus className="h-4 w-4 mr-2" />
+            新增保養記錄
+          </Button>
+        </div>
 
-          <div className="bg-white p-6 rounded-lg border">
-            <h1 className="text-2xl font-bold mb-4">保養記錄</h1>
-
-            {/* 車輛基本資訊 */}
-            <div className="flex gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* 車輛資訊卡片 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Car className="h-5 w-5" />
+                車輛資訊
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               {/* 車輛圖片 */}
-              <div className="w-32 h-32 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border">
+              <div className="mb-4">
                 {vehicle.image ? (
                   <img
                     src={vehicle.image || "/placeholder.svg"}
                     alt={`${vehicle.brand} ${vehicle.model}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-32 object-cover rounded border"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    <Car className="h-16 w-16" />
+                  <div className="w-full h-32 bg-gray-100 rounded border flex items-center justify-center">
+                    <ImageIcon className="h-8 w-8 text-gray-400" />
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
+              <div className="space-y-2">
                 <div>
                   <p className="text-sm text-gray-600">車輛</p>
-                  <p className="font-semibold">
+                  <p className="font-medium">
                     {vehicle.brand} {vehicle.model}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">車牌</p>
-                  <p className="font-semibold">{vehicle.licensePlate}</p>
+                  <p className="font-medium">{vehicle.licensePlate}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">車主</p>
-                  <p className="font-semibold">{vehicle.ownerName}</p>
+                  <p className="text-sm text-gray-600">引擎代碼</p>
+                  <p className="font-medium">{vehicle.engineCode}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">目前公里數</p>
-                  <p className="font-semibold">{vehicle.currentMileage.toLocaleString()} km</p>
+                  <p className="font-medium">{vehicle.currentMileage.toLocaleString()} km</p>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 保養記錄統計 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">總保養次數</p>
-                  <p className="text-2xl font-bold">{maintenanceHistory.length}</p>
+                  <p className="text-sm text-gray-600">車主</p>
+                  <p className="font-medium flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    {vehicle.ownerName}
+                  </p>
                 </div>
-                <Wrench className="h-8 w-8 text-blue-600" />
+                <div>
+                  <p className="text-sm text-gray-600">聯絡電話</p>
+                  <p className="font-medium flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    {vehicle.customerPhone}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
 
+          {/* 保養統計 */}
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">總花費</p>
-                  <p className="text-2xl font-bold">
-                    ${maintenanceHistory.reduce((sum, record) => sum + (record.cost || 0), 0).toLocaleString()}
-                  </p>
-                </div>
-                <DollarSign className="h-8 w-8 text-green-600" />
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wrench className="h-5 w-5" />
+                保養統計
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600">總保養次數</p>
+                <p className="text-2xl font-bold">{records.length}</p>
               </div>
+              <div>
+                <p className="text-sm text-gray-600">總保養費用</p>
+                <p className="text-2xl font-bold">NT$ {totalCost.toLocaleString()}</p>
+              </div>
+              {lastMaintenance && (
+                <div>
+                  <p className="text-sm text-gray-600">最後保養</p>
+                  <p className="font-medium">{lastMaintenance.date.toLocaleDateString()}</p>
+                  <p className="text-sm text-gray-500">{lastMaintenance.item.name}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
+          {/* 下次保養提醒 */}
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">最近保養</p>
-                  <p className="text-2xl font-bold">
-                    {maintenanceHistory.length > 0
-                      ? new Date(maintenanceHistory[0].date).toLocaleDateString("zh-TW")
-                      : "無記錄"}
-                  </p>
-                </div>
-                <Calendar className="h-8 w-8 text-orange-600" />
-              </div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                保養提醒
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {records
+                .filter(
+                  (record) => record.nextMaintenanceMileage && record.nextMaintenanceMileage > vehicle.currentMileage,
+                )
+                .slice(0, 3)
+                .map((record) => (
+                  <div key={record.id} className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+                    <p className="font-medium text-yellow-800">{record.item.name}</p>
+                    <p className="text-sm text-yellow-600">
+                      建議於 {record.nextMaintenanceMileage?.toLocaleString()} km 保養
+                    </p>
+                    <p className="text-xs text-yellow-500">
+                      還有 {((record.nextMaintenanceMileage || 0) - vehicle.currentMileage).toLocaleString()} km
+                    </p>
+                  </div>
+                ))}
+              {records.filter(
+                (record) => record.nextMaintenanceMileage && record.nextMaintenanceMileage > vehicle.currentMileage,
+              ).length === 0 && <p className="text-gray-500 text-center py-4">暫無保養提醒</p>}
             </CardContent>
           </Card>
         </div>
@@ -173,61 +197,77 @@ export default function MaintenanceHistoryPage() {
         {/* 保養記錄列表 */}
         <Card>
           <CardHeader>
-            <CardTitle>保養歷史記錄</CardTitle>
+            <CardTitle>保養記錄明細</CardTitle>
           </CardHeader>
           <CardContent>
-            {maintenanceHistory.length === 0 ? (
+            {records.length === 0 ? (
               <div className="text-center py-8">
                 <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">尚無保養記錄</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">尚無保養記錄</h3>
+                <p className="text-gray-600 mb-4">開始記錄這台車輛的保養維護情況</p>
+                <Button onClick={() => router.push(`/vehicles/${vehicleId}/new-maintenance`)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  新增第一筆保養記錄
+                </Button>
               </div>
             ) : (
               <div className="space-y-4">
-                {maintenanceHistory.map((record) => (
-                  <div key={record.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{record.item.name}</h3>
-                          <Badge className={getCategoryColor(record.item.category)}>{record.item.category}</Badge>
-                        </div>
+                {records.map((record) => (
+                  <Card key={record.id} className="border border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold">{record.item.name}</h3>
+                            <Badge variant="outline">{record.item.category}</Badge>
+                          </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            <span>{new Date(record.date).toLocaleDateString("zh-TW")}</span>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <p className="text-gray-600">保養日期</p>
+                              <p className="font-medium flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                {record.date.toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">公里數</p>
+                              <p className="font-medium">{record.mileage.toLocaleString()} km</p>
+                            </div>
+                            {record.technician && (
+                              <div>
+                                <p className="text-gray-600">技師</p>
+                                <p className="font-medium">{record.technician}</p>
+                              </div>
+                            )}
+                            {record.cost && (
+                              <div>
+                                <p className="text-gray-600">費用</p>
+                                <p className="font-medium flex items-center gap-1">
+                                  <DollarSign className="h-4 w-4" />
+                                  NT$ {record.cost.toLocaleString()}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Gauge className="h-4 w-4" />
-                            <span>{record.mileage.toLocaleString()} km</span>
-                          </div>
-                          {record.cost && (
-                            <div className="flex items-center gap-2">
-                              <DollarSign className="h-4 w-4" />
-                              <span>${record.cost.toLocaleString()}</span>
+
+                          {record.notes && (
+                            <div className="mt-3 p-3 bg-gray-50 rounded">
+                              <p className="text-sm text-gray-700">{record.notes}</p>
                             </div>
                           )}
+
                           {record.nextMaintenanceMileage && (
-                            <div className="text-blue-600">
-                              下次保養: {record.nextMaintenanceMileage.toLocaleString()} km
+                            <div className="mt-2">
+                              <p className="text-sm text-blue-600">
+                                下次保養建議：{record.nextMaintenanceMileage.toLocaleString()} km
+                              </p>
                             </div>
                           )}
                         </div>
-
-                        {record.notes && (
-                          <div className="text-sm text-gray-700 bg-gray-100 p-2 rounded">
-                            <strong>備註:</strong> {record.notes}
-                          </div>
-                        )}
                       </div>
-
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          編輯
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}

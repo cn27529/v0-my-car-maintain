@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,30 +9,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FileUpload } from "@/components/ui/file-upload"
-import { Plus, Edit, Car, Phone, Users, Grid, List, Search, Calendar } from "lucide-react"
-import { mockVehicles, mockMaintenanceRecords, defaultMaintenanceItems } from "@/lib/data"
+import { Plus, Edit, Trash2, Car, Search, Calendar, Phone, User, ImageIcon } from "lucide-react"
+import { mockVehicles } from "@/lib/data"
 import type { Vehicle } from "@/types"
-import Link from "next/link"
-
-interface OwnerGroup {
-  ownerName: string
-  customerPhone: string
-  vehicles: Vehicle[]
-  totalVehicles: number
-  totalMaintenance: number
-  latestMaintenance?: Date
-}
-
-type ViewMode = "all" | "grouped"
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [viewMode, setViewMode] = useState<ViewMode>("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedOwner, setSelectedOwner] = useState<string>("all")
   const [formData, setFormData] = useState({
     brand: "",
     model: "",
@@ -46,83 +33,43 @@ export default function VehiclesPage() {
     image: "",
   })
 
-  // 搜尋過濾
-  const filteredVehicles = useMemo(() => {
-    if (!searchQuery.trim()) return vehicles
-
-    const query = searchQuery.toLowerCase()
-    return vehicles.filter(
-      (vehicle) =>
-        vehicle.licensePlate.toLowerCase().includes(query) ||
-        vehicle.brand.toLowerCase().includes(query) ||
-        vehicle.model.toLowerCase().includes(query) ||
-        vehicle.ownerName.toLowerCase().includes(query) ||
-        vehicle.customerPhone.includes(query),
-    )
-  }, [vehicles, searchQuery])
-
-  // 按車主分組
-  const ownerGroups = useMemo(() => {
-    const groups = new Map<string, OwnerGroup>()
-
-    filteredVehicles.forEach((vehicle) => {
-      const key = `${vehicle.ownerName}-${vehicle.customerPhone}`
-
-      if (groups.has(key)) {
-        const group = groups.get(key)!
-        group.vehicles.push(vehicle)
-        group.totalVehicles += 1
-      } else {
-        // 計算該車主所有車輛的保養記錄數
-        const ownerVehicleIds = vehicles
-          .filter((v) => v.ownerName === vehicle.ownerName && v.customerPhone === vehicle.customerPhone)
-          .map((v) => v.id)
-
-        const maintenanceCount = mockMaintenanceRecords.filter((record) =>
-          ownerVehicleIds.includes(record.vehicleId),
-        ).length
-
-        // 找最新保養記錄
-        const latestMaintenanceRecord = mockMaintenanceRecords
-          .filter((record) => ownerVehicleIds.includes(record.vehicleId))
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
-
-        groups.set(key, {
-          ownerName: vehicle.ownerName,
-          customerPhone: vehicle.customerPhone,
-          vehicles: [vehicle],
-          totalVehicles: 1,
-          totalMaintenance: maintenanceCount,
-          latestMaintenance: latestMaintenanceRecord ? new Date(latestMaintenanceRecord.date) : undefined,
-        })
-      }
-    })
-
-    return Array.from(groups.values()).sort((a, b) => b.totalVehicles - a.totalVehicles)
-  }, [filteredVehicles, vehicles])
-
-  // 多車主統計
-  const multiVehicleOwners = ownerGroups.filter((group) => group.totalVehicles > 1)
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    const vehicleData = {
-      ...formData,
-      currentMileage: Number.parseInt(formData.currentMileage),
-      manufactureYear: Number.parseInt(formData.manufactureYear),
-    }
 
     if (editingVehicle) {
       // 更新車輛
       setVehicles(
-        vehicles.map((v) => (v.id === editingVehicle.id ? { ...v, ...vehicleData, updatedAt: new Date() } : v)),
+        vehicles.map((vehicle) =>
+          vehicle.id === editingVehicle.id
+            ? {
+                ...vehicle,
+                brand: formData.brand,
+                model: formData.model,
+                engineCode: formData.engineCode,
+                currentMileage: Number.parseInt(formData.currentMileage),
+                licensePlate: formData.licensePlate,
+                ownerName: formData.ownerName,
+                customerPhone: formData.customerPhone,
+                manufactureYear: Number.parseInt(formData.manufactureYear),
+                image: formData.image,
+                updatedAt: new Date(),
+              }
+            : vehicle,
+        ),
       )
     } else {
       // 新增車輛
       const newVehicle: Vehicle = {
         id: Date.now().toString(),
-        ...vehicleData,
+        brand: formData.brand,
+        model: formData.model,
+        engineCode: formData.engineCode,
+        currentMileage: Number.parseInt(formData.currentMileage),
+        licensePlate: formData.licensePlate,
+        ownerName: formData.ownerName,
+        customerPhone: formData.customerPhone,
+        manufactureYear: Number.parseInt(formData.manufactureYear),
+        image: formData.image,
         createdAt: new Date(),
         updatedAt: new Date(),
       }
@@ -130,7 +77,18 @@ export default function VehiclesPage() {
     }
 
     setIsDialogOpen(false)
-    resetForm()
+    setEditingVehicle(null)
+    setFormData({
+      brand: "",
+      model: "",
+      engineCode: "",
+      currentMileage: "",
+      licensePlate: "",
+      ownerName: "",
+      customerPhone: "",
+      manufactureYear: "",
+      image: "",
+    })
   }
 
   const handleEdit = (vehicle: Vehicle) => {
@@ -149,121 +107,42 @@ export default function VehiclesPage() {
     setIsDialogOpen(true)
   }
 
-  const resetForm = () => {
-    setEditingVehicle(null)
-    setFormData({
-      brand: "",
-      model: "",
-      engineCode: "",
-      currentMileage: "",
-      licensePlate: "",
-      ownerName: "",
-      customerPhone: "",
-      manufactureYear: "",
-      image: "",
-    })
-  }
-
-  const handleImageUpload = (file: File | null) => {
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        setFormData({ ...formData, image: result })
-      }
-      reader.readAsDataURL(file)
-    } else {
-      setFormData({ ...formData, image: "" })
+  const handleDelete = (vehicleId: string) => {
+    if (confirm("確定要刪除這台車輛嗎？")) {
+      setVehicles(vehicles.filter((vehicle) => vehicle.id !== vehicleId))
     }
   }
 
-  const getLatestMaintenance = (vehicleId: string) => {
-    const records = mockMaintenanceRecords
-      .filter((record) => record.vehicleId === vehicleId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
-    return records[0]
+  const handleImageUpload = (base64: string) => {
+    setFormData({ ...formData, image: base64 })
   }
 
-  const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
-    const latestMaintenance = getLatestMaintenance(vehicle.id)
-    const maintenanceItem = latestMaintenance
-      ? defaultMaintenanceItems.find((item) => item.id === latestMaintenance.itemId)
-      : null
+  // 搜尋和篩選邏輯
+  const uniqueOwners = Array.from(new Set(vehicles.map((v) => v.ownerName)))
 
-    return (
-      <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="p-6">
-          <div className="flex justify-between items-start">
-            <div className="flex gap-4">
-              {/* 車輛圖片 */}
-              <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border">
-                {vehicle.image ? (
-                  <img
-                    src={vehicle.image || "/placeholder.svg"}
-                    alt={`${vehicle.brand} ${vehicle.model}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    <Car className="h-12 w-12" />
-                  </div>
-                )}
-              </div>
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    const matchesSearch =
+      vehicle.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.licensePlate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold">
-                    {vehicle.brand} {vehicle.model}
-                  </h3>
-                  <Badge variant="outline">{vehicle.licensePlate}</Badge>
-                </div>
+    const matchesOwner = selectedOwner === "all" || vehicle.ownerName === selectedOwner
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    <span>{vehicle.customerPhone}</span>
-                  </div>
-                  <div>車主: {vehicle.ownerName}</div>
-                  <div>出廠年份: {vehicle.manufactureYear}</div>
-                  <div>引擎代碼: {vehicle.engineCode}</div>
-                  <div>公里數: {vehicle.currentMileage.toLocaleString()} km</div>
-                </div>
+    return matchesSearch && matchesOwner
+  })
 
-                {latestMaintenance && maintenanceItem && (
-                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                    <p className="text-sm font-medium text-blue-800">最近保養: {maintenanceItem.name}</p>
-                    <p className="text-xs text-blue-600">
-                      {new Date(latestMaintenance.date).toLocaleDateString("zh-TW")} -
-                      {latestMaintenance.mileage.toLocaleString()} km
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Link href={`/vehicles/${vehicle.id}/new-maintenance`}>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  新保養
-                </Button>
-              </Link>
-              <Link href={`/vehicles/${vehicle.id}/maintenance-history`}>
-                <Button variant="outline" size="sm">
-                  查看保養記錄
-                </Button>
-              </Link>
-              <Button variant="outline" size="sm" onClick={() => handleEdit(vehicle)}>
-                <Edit className="h-4 w-4 mr-2" />
-                編輯
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
+  // 按車主分組
+  const groupedVehicles = uniqueOwners.reduce(
+    (acc, owner) => {
+      const ownerVehicles = filteredVehicles.filter((v) => v.ownerName === owner)
+      if (ownerVehicles.length > 0) {
+        acc[owner] = ownerVehicles
+      }
+      return acc
+    },
+    {} as Record<string, Vehicle[]>,
+  )
 
   return (
     <MainLayout>
@@ -271,7 +150,7 @@ export default function VehiclesPage() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold">車輛管理</h1>
-            <p className="text-gray-600">管理所有車輛的基本資料</p>
+            <p className="text-gray-600">管理所有車輛資訊和車主資料</p>
           </div>
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -281,32 +160,11 @@ export default function VehiclesPage() {
                 新增車輛
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingVehicle ? "編輯車輛" : "新增車輛"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* 車輛圖片上傳 */}
-                <div>
-                  <Label>車輛圖片</Label>
-                  <FileUpload
-                    accept="image/*"
-                    maxSize={2}
-                    onFileSelect={handleImageUpload}
-                    currentFile={formData.image}
-                    placeholder="上傳車輛圖片 (最大 2MB)"
-                  />
-                  {formData.image && (
-                    <div className="mt-2">
-                      <img
-                        src={formData.image || "/placeholder.svg"}
-                        alt="車輛預覽"
-                        className="max-h-32 object-contain border rounded"
-                      />
-                    </div>
-                  )}
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="brand">廠牌</Label>
@@ -314,61 +172,35 @@ export default function VehiclesPage() {
                       id="brand"
                       value={formData.brand}
                       onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                      placeholder="例如：Toyota"
                       required
                     />
                   </div>
+
                   <div>
                     <Label htmlFor="model">車款</Label>
                     <Input
                       id="model"
                       value={formData.model}
                       onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                      placeholder="例如：Camry"
                       required
                     />
                   </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="licensePlate">車牌號碼</Label>
-                  <Input
-                    id="licensePlate"
-                    value={formData.licensePlate}
-                    onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="ownerName">車主姓名</Label>
-                  <Input
-                    id="ownerName"
-                    value={formData.ownerName}
-                    onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="customerPhone">客戶電話</Label>
-                  <Input
-                    id="customerPhone"
-                    value={formData.customerPhone}
-                    onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                    required
-                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="manufactureYear">出廠年份</Label>
+                    <Label htmlFor="engineCode">引擎代碼</Label>
                     <Input
-                      id="manufactureYear"
-                      type="number"
-                      value={formData.manufactureYear}
-                      onChange={(e) => setFormData({ ...formData, manufactureYear: e.target.value })}
+                      id="engineCode"
+                      value={formData.engineCode}
+                      onChange={(e) => setFormData({ ...formData, engineCode: e.target.value })}
+                      placeholder="例如：2AR-FE"
                       required
                     />
                   </div>
+
                   <div>
                     <Label htmlFor="currentMileage">目前公里數</Label>
                     <Input
@@ -376,19 +208,80 @@ export default function VehiclesPage() {
                       type="number"
                       value={formData.currentMileage}
                       onChange={(e) => setFormData({ ...formData, currentMileage: e.target.value })}
+                      placeholder="例如：50000"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="licensePlate">車牌號碼</Label>
+                    <Input
+                      id="licensePlate"
+                      value={formData.licensePlate}
+                      onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value })}
+                      placeholder="例如：ABC-1234"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="manufactureYear">出廠年份</Label>
+                    <Input
+                      id="manufactureYear"
+                      type="number"
+                      value={formData.manufactureYear}
+                      onChange={(e) => setFormData({ ...formData, manufactureYear: e.target.value })}
+                      placeholder="例如：2020"
+                      min="1990"
+                      max={new Date().getFullYear()}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="ownerName">車主姓名</Label>
+                    <Input
+                      id="ownerName"
+                      value={formData.ownerName}
+                      onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                      placeholder="例如：王小明"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="customerPhone">聯絡電話</Label>
+                    <Input
+                      id="customerPhone"
+                      value={formData.customerPhone}
+                      onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
+                      placeholder="例如：0912-345-678"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="engineCode">引擎代碼</Label>
-                  <Input
-                    id="engineCode"
-                    value={formData.engineCode}
-                    onChange={(e) => setFormData({ ...formData, engineCode: e.target.value })}
-                    required
+                  <Label htmlFor="image">車輛圖片</Label>
+                  <FileUpload
+                    onUpload={handleImageUpload}
+                    accept="image/*"
+                    maxSize={2 * 1024 * 1024} // 2MB
+                    preview={formData.image}
                   />
+                  {formData.image && (
+                    <div className="mt-2">
+                      <img
+                        src={formData.image || "/placeholder.svg"}
+                        alt="車輛預覽"
+                        className="w-32 h-24 object-cover rounded border"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2">
@@ -402,31 +295,48 @@ export default function VehiclesPage() {
           </Dialog>
         </div>
 
-        {/* 搜尋區域 */}
+        {/* 搜尋和篩選 */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              車輛搜尋
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Input
-              placeholder="搜尋車牌號碼、廠牌、車款、車主姓名或客戶電話..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <CardContent className="p-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="搜尋車輛（廠牌、車款、車牌、車主）"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="w-48">
+                <Select value={selectedOwner} onValueChange={setSelectedOwner}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="選擇車主" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">所有車主</SelectItem>
+                    {uniqueOwners.map((owner) => (
+                      <SelectItem key={owner} value={owner}>
+                        {owner}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* 統計卡片 */}
+        {/* 統計資訊 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">總車輛數</p>
-                  <p className="text-2xl font-bold">{filteredVehicles.length}</p>
+                  <p className="text-2xl font-bold">{vehicles.length}</p>
                 </div>
                 <Car className="h-8 w-8 text-blue-600" />
               </div>
@@ -438,9 +348,9 @@ export default function VehiclesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">車主數量</p>
-                  <p className="text-2xl font-bold">{ownerGroups.length}</p>
+                  <p className="text-2xl font-bold">{uniqueOwners.length}</p>
                 </div>
-                <Users className="h-8 w-8 text-green-600" />
+                <User className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
@@ -449,10 +359,12 @@ export default function VehiclesPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">多車主數</p>
-                  <p className="text-2xl font-bold">{multiVehicleOwners.length}</p>
+                  <p className="text-sm font-medium text-gray-600">多車車主</p>
+                  <p className="text-2xl font-bold">
+                    {Object.values(groupedVehicles).filter((vehicles) => vehicles.length > 1).length}
+                  </p>
                 </div>
-                <Grid className="h-8 w-8 text-purple-600" />
+                <Car className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
@@ -461,93 +373,108 @@ export default function VehiclesPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">保養記錄</p>
-                  <p className="text-2xl font-bold">{mockMaintenanceRecords.length}</p>
+                  <p className="text-sm font-medium text-gray-600">搜尋結果</p>
+                  <p className="text-2xl font-bold">{filteredVehicles.length}</p>
                 </div>
-                <Calendar className="h-8 w-8 text-orange-600" />
+                <Search className="h-8 w-8 text-orange-600" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* 視圖切換 */}
-        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="all" className="flex items-center gap-2">
-              <List className="h-4 w-4" />
-              全部車輛
-            </TabsTrigger>
-            <TabsTrigger value="grouped" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              按車主分組
-            </TabsTrigger>
-          </TabsList>
-
-          {/* 全部車輛視圖 */}
-          <TabsContent value="all">
-            <div className="space-y-4">
-              {filteredVehicles.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">沒有找到符合條件的車輛</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                filteredVehicles.map((vehicle) => <VehicleCard key={vehicle.id} vehicle={vehicle} />)
-              )}
-            </div>
-          </TabsContent>
-
-          {/* 按車主分組視圖 */}
-          <TabsContent value="grouped">
-            <div className="space-y-6">
-              {ownerGroups.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">沒有找到符合條件的車主</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                ownerGroups.map((group) => (
-                  <Card key={`${group.ownerName}-${group.customerPhone}`} className="overflow-hidden">
-                    <CardHeader className="bg-gray-50">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <CardTitle className="flex items-center gap-2">
-                            <Users className="h-5 w-5 text-blue-600" />
-                            {group.ownerName}
-                            {group.totalVehicles > 1 && (
-                              <Badge className="bg-blue-100 text-blue-800">{group.totalVehicles} 台車輛</Badge>
-                            )}
-                          </CardTitle>
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-4 w-4" />
-                              {group.customerPhone}
+        {/* 車輛列表 - 按車主分組 */}
+        <div className="space-y-6">
+          {Object.entries(groupedVehicles).map(([owner, ownerVehicles]) => (
+            <Card key={owner}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  {owner}
+                  <Badge variant="secondary">{ownerVehicles.length} 台車輛</Badge>
+                  {ownerVehicles.length > 1 && (
+                    <Badge variant="outline" className="text-purple-600 border-purple-600">
+                      多車車主
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {ownerVehicles.map((vehicle) => (
+                    <Card key={vehicle.id} className="border border-gray-200">
+                      <CardContent className="p-4">
+                        {/* 車輛圖片 */}
+                        <div className="mb-3">
+                          {vehicle.image ? (
+                            <img
+                              src={vehicle.image || "/placeholder.svg"}
+                              alt={`${vehicle.brand} ${vehicle.model}`}
+                              className="w-full h-32 object-cover rounded border"
+                            />
+                          ) : (
+                            <div className="w-full h-32 bg-gray-100 rounded border flex items-center justify-center">
+                              <ImageIcon className="h-8 w-8 text-gray-400" />
                             </div>
-                            <div>保養記錄: {group.totalMaintenance} 次</div>
-                            {group.latestMaintenance && (
-                              <div>最近保養: {group.latestMaintenance.toLocaleDateString("zh-TW")}</div>
-                            )}
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-lg">
+                              {vehicle.brand} {vehicle.model}
+                            </h3>
+                            <Badge variant="outline">{vehicle.manufactureYear}</Badge>
+                          </div>
+
+                          <div className="space-y-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Car className="h-4 w-4" />
+                              <span>{vehicle.licensePlate}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-4 w-4" />
+                              <span>{vehicle.customerPhone}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>{vehicle.currentMileage.toLocaleString()} km</span>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 pt-2">
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(vehicle)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete(vehicle.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => (window.location.href = `/vehicles/${vehicle.id}/maintenance-history`)}
+                            >
+                              保養記錄
+                            </Button>
                           </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <div className="space-y-4 p-6">
-                        {group.vehicles.map((vehicle) => (
-                          <VehicleCard key={vehicle.id} vehicle={vehicle} />
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredVehicles.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">沒有找到車輛</h3>
+              <p className="text-gray-600">請調整搜尋條件或新增車輛</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </MainLayout>
   )

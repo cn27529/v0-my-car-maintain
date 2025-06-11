@@ -523,3 +523,6 @@ export const mockMaintenanceRecords: MaintenanceRecord[] = [
     updatedAt: new Date("2024-06-18"),
   },
 ]
+
+// 導出 MaintenanceCategory 以便其他文件使用
+export { MaintenanceCategory }
